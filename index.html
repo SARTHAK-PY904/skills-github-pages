@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic Tac Toe - Dynamic Blending Edition</title>
+  <!-- Google Fonts for a modern look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* Continuous changing background using animated gradient */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Montserrat', sans-serif;
+      /* A multi-color gradient that moves slowly */
+      background: linear-gradient(45deg, #ff7e5f, #feb47b, #86a8e7, #91eae4);
+      background-size: 300% 300%;
+      animation: gradientAnimation 30s ease infinite;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Watermark in the background */
+    .watermark {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 2rem;
+      color: rgba(255, 255, 255, 0.1);
+      pointer-events: none;
+      z-index: 0;
+      transform: rotate(-15deg);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 3rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      z-index: 1;
+    }
+
+    /* Glassmorphism-style game board keeping the same format */
+    #game {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 15px;
+      padding: 20px;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+      border-radius: 20px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 20px;
+      z-index: 1;
+    }
+
+    .cell {
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid #fff;
+      font-size: 60px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      user-select: none;
+    }
+    
+    .cell:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #message {
+      font-size: 1.8rem;
+      margin: 15px 0;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+      z-index: 1;
+    }
+    
+    button {
+      padding: 10px 25px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 25px;
+      background-color: #fff;
+      color: #333;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      z-index: 1;
+    }
+    
+    button:hover {
+      background-color: #e0e0e0;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark">designed by saarthak sharma</div>
+  <h1>Tic Tac Toe</h1>
+  <div id="game">
+    <div class="cell" data-index="0"></div>
+    <div class="cell" data-index="1"></div>
+    <div class="cell" data-index="2"></div>
+    <div class="cell" data-index="3"></div>
+    <div class="cell" data-index="4"></div>
+    <div class="cell" data-index="5"></div>
+    <div class="cell" data-index="6"></div>
+    <div class="cell" data-index="7"></div>
+    <div class="cell" data-index="8"></div>
+  </div>
+  <div id="message"></div>
+  <button id="restart" onclick="restartGame()">Restart Game</button>
+
+  <script>
+    // Game variables
+    let board = Array(9).fill("");  // Board representation
+    const human = "X";              // Human player's mark
+    const ai = "O";                 // AI's mark
+    let gameOver = false;
+
+    // Selecting DOM elements
+    const cells = document.querySelectorAll('.cell');
+    const messageEl = document.getElementById("message");
+
+    // Attach click event to each cell for human moves
+    cells.forEach(cell => {
+      cell.addEventListener('click', function() {
+        if (gameOver) return;
+        const index = this.getAttribute('data-index');
+        if (board[index] !== "") return;  // Skip if cell is already marked
+
+        // Human move
+        board[index] = human;
+        this.textContent = human;
+        if (checkGameOver()) return;
+
+        // AI move after a short delay for natural effect
+        setTimeout(() => {
+          const aiIndex = bestMove();
+          board[aiIndex] = ai;
+          document.querySelector(`.cell[data-index="${aiIndex}"]`).textContent = ai;
+          checkGameOver();
+        }, 300);
+      });
+    });
+
+    // Check for winners or a draw
+    function checkGameOver() {
+      const winner = checkWinner(board);
+      if (winner) {
+        messageEl.textContent = winner + " wins!";
+        gameOver = true;
+        return true;
+      }
+      if (isBoardFull(board)) {
+        messageEl.textContent = "It's a draw!";
+        gameOver = true;
+        return true;
+      }
+      return false;
+    }
+
+    // Returns the winner based on win conditions or null if none
+    function checkWinner(b) {
+      const winningCombos = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+      ];
+      for (let combo of winningCombos) {
+        const [a, b1, c] = combo;
+        if (b[a] !== "" && b[a] === b[b1] && b[a] === b[c]) {
+          return b[a];
+        }
+      }
+      return null;
+    }
+
+    // Check if the board is completely filled
+    function isBoardFull(b) {
+      return b.every(cell => cell !== "");
+    }
+
+    // The minimax algorithm for optimum AI move selection
+    function minimax(newBoard, depth, isMaximizing) {
+      const winner = checkWinner(newBoard);
+      if (winner === ai) return 10 - depth;
+      if (winner === human) return depth - 10;
+      if (isBoardFull(newBoard)) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < newBoard.length; i++) {
+          if (newBoard[i] === "") {
+            newBoard[i] = ai;
+            let score = minimax(newBoard, depth + 1, false);
+            newBoard[i] = "";
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < newBoard.length; i++) {
+          if (newBoard[i] === "") {
+            newBoard[i] = human;
+            let score = minimax(newBoard, depth + 1, true);
+            newBoard[i] = "";
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    // Determine the best move for the AI using the minimax method
+    function bestMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < board.length; i++) {
+        if (board[i] === "") {
+          board[i] = ai;
+          let score = minimax(board, 0, false);
+          board[i] = "";
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      return move;
+    }
+
+    // Restart the game by clearing the board and messages
+    function restartGame() {
+      board = Array(9).fill("");
+      cells.forEach(cell => (cell.textContent = ""));
+      messageEl.textContent = "";
+      gameOver = false;
+    }
+  </script>
+</body>
+</html>
